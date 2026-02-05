@@ -1,0 +1,33 @@
+<svg width="1280" height="720" viewBox="0 0 1280 720" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1280" height="720" fill="#F0F7F9"/>
+  <rect x="42" y="32" width="1196" height="656" rx="20" fill="#FFFFFF" stroke="#1C4C75" stroke-opacity="0.2" stroke-width="4"/>
+  <text x="88" y="100" font-family="Lato, sans-serif" font-size="56" font-weight="900" fill="#1C4C75">Drafty Bird</text>
+  <text x="88" y="140" font-family="Lato, sans-serif" font-size="22" font-weight="400" fill="#000000">Guide the Draft Detector past leaky ducts and stack up comfort points.</text>
+  <rect x="88" y="180" width="860" height="460" rx="14" fill="#FFFFFF" stroke="#1C4C75" stroke-width="4"/>
+  <rect x="950" y="180" width="242" height="460" rx="14" fill="#FFFFFF" stroke="#1C4C75" stroke-opacity="0.25" stroke-width="3"/>
+  <rect x="88" y="180" width="860" height="460" rx="14" fill="url(#air)"/>
+  <rect x="360" y="180" width="84" height="182" fill="#1C4C75"/>
+  <rect x="360" y="520" width="84" height="120" fill="#1C4C75"/>
+  <rect x="690" y="180" width="84" height="132" fill="#1C4C75"/>
+  <rect x="690" y="478" width="84" height="162" fill="#1C4C75"/>
+  <circle cx="258" cy="396" r="20" fill="#04B290"/>
+  <text x="126" y="244" font-family="Lato, sans-serif" font-size="64" font-weight="900" fill="#1C4C75">7</text>
+  <rect x="250" y="500" width="530" height="86" rx="10" fill="#1C4C75" fill-opacity="0.82"/>
+  <text x="515" y="546" text-anchor="middle" font-family="Lato, sans-serif" font-size="28" font-weight="700" fill="#FFFFFF">Comfort up. Utility bill down.</text>
+  <text x="982" y="226" font-family="Lato, sans-serif" font-size="28" font-weight="900" fill="#1C4C75">Top 10</text>
+  <text x="982" y="255" font-family="Lato, sans-serif" font-size="20" font-weight="900" fill="#04B290">Comfort Runs</text>
+  <text x="980" y="300" font-family="Lato, sans-serif" font-size="20" fill="#000000">1. Guest</text>
+  <text x="1150" y="300" font-family="Lato, sans-serif" font-size="20" font-weight="900" fill="#04B290">12</text>
+  <text x="980" y="335" font-family="Lato, sans-serif" font-size="20" fill="#000000">2. Guest</text>
+  <text x="1150" y="335" font-family="Lato, sans-serif" font-size="20" font-weight="900" fill="#04B290">9</text>
+  <text x="980" y="370" font-family="Lato, sans-serif" font-size="20" fill="#000000">3. Guest</text>
+  <text x="1150" y="370" font-family="Lato, sans-serif" font-size="20" font-weight="900" fill="#04B290">7</text>
+  <rect x="88" y="650" width="280" height="40" rx="8" fill="#1C4C75"/>
+  <text x="228" y="676" text-anchor="middle" font-family="Lato, sans-serif" font-size="20" font-weight="700" fill="#FFFFFF">Restart</text>
+  <defs>
+    <linearGradient id="air" x1="518" y1="180" x2="518" y2="640" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#F0F7F9"/>
+    </linearGradient>
+  </defs>
+</svg>
