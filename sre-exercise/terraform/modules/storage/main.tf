@@ -8,6 +8,11 @@ resource "azurerm_storage_account" "main" {
   location                 = var.location
   account_tier             = "Standard"
   account_replication_type = "LRS"
+
+  # Security Enhancements
+  https_traffic_only_enabled    = true
+  min_tls_version               = "TLS1_2"
+  public_network_access_enabled = false
 }
 
 resource "azurerm_storage_share" "data" {

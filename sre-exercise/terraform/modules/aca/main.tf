@@ -17,11 +17,12 @@ resource "azurerm_log_analytics_workspace" "main" {
 }
 
 resource "azurerm_container_app_environment" "main" {
-  name                       = "cae-draftybird-${var.env}"
-  location                   = var.location
-  resource_group_name        = var.rg_name
-  log_analytics_workspace_id = azurerm_log_analytics_workspace.main.id
-  infrastructure_subnet_id   = var.subnet_id
+  name                           = "cae-draftybird-${var.env}"
+  location                       = var.location
+  resource_group_name            = var.rg_name
+  log_analytics_workspace_id     = azurerm_log_analytics_workspace.main.id
+  infrastructure_subnet_id       = var.subnet_id
+  internal_load_balancer_enabled = true # Security: Do not expose Environment directly to internet
 }
 
 resource "azurerm_container_app_environment_storage" "main" {
