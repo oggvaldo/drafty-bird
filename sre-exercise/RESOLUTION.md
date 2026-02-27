@@ -67,5 +67,16 @@ This document (ADR - Architecture Decision Record) explains the reasoning behind
 - If the Green deployment fails its health checks, the ALB never routes traffic to it, and CodeDeploy safely aborts, leaving the Blue environment intact.
 
 **Trade-offs:**
-- Blue/Green requires temporarily doubling our compute resources during the deployment window (running both Blue and Green containers simultaneously).
-- Because both containers might briefly attempt to access the SQLite database during the cutover, we rely on the application's graceful shutdown and initialization phases to not hold prolonged locks.
+---
+
+## 6. Infrastructure-as-Code: Modularization
+
+**Decision:** Define the AWS infrastructure using logical Terraform modules (`networking`, `efs`, `alb`, and `ecs`) rather than a monolithic `main.tf` file.
+
+**Reasoning:**
+- **Future Scalability:** Breaking the infrastructure into modules makes it much easier to deploy additional services into the same cluster. Instead of copying large blocks of resource definitions, future services can simply invoke the `ecs` module or reuse the existing `alb` and `networking` module outputs.
+- **Separation of Concerns:** Networking (VPCs, Security Groups) changes at a different frequency and often requires different permissions than application compute (ECS Tasks). Modularizing them explicitly defines dependencies and interfaces (via `variables.tf` and `outputs.tf`).
+
+**Trade-offs:**
+- **Initial Overhead:** Creating the directory structure, variables, outputs, and wiring modules together takes longer initially than throwing all resources into a single file.
+- **Complexity in Navigation:** Engineers must trace variable passing between modules (e.g., passing `module.networking.subnet_ids` into `module.ecs.subnet_ids`) rather than reading a flat configuration. However, this trade-off is widely accepted as best practice for maintainable IaC.

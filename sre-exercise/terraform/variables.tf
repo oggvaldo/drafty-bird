@@ -21,8 +21,7 @@ variable "otel_endpoint_url" {
   default     = ""
 }
 
-# outputs.tf
 output "alb_hostname" {
-  value       = aws_lb.main.dns_name
+  value       = module.alb.dns_name
   description = "The DNS name of the load balancer"
 }
