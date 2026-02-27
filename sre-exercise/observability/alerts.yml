@@ -1,0 +1,56 @@
+groups:
+  - name: drafty-bird-alerts
+    rules:
+      # ----------------------------------------------------
+      # Availability / Service Down
+      # ----------------------------------------------------
+      - alert: DraftyBirdServiceDown
+        expr: up{job="drafty-bird"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Drafty Bird service is down"
+          description: "No Drafty Bird instances have been reachable for 1 minute. The ECS task might be crash-looping."
+
+      # ----------------------------------------------------
+      # Error Rate High (5xx)
+      # ----------------------------------------------------
+      - alert: DraftyBirdHighErrorRate
+        # Alert if the 5xx error rate exceeds 1% over the last 5 minutes
+        expr: >
+          sum(rate(http_requests_total{status=~"5.."}[5m])) / 
+          sum(rate(http_requests_total[5m])) > 0.01
+        for: 2m
+        labels:
+          severity: critical
+        annotations:
+          summary: "Drafty Bird 5xx error rate is high"
+          description: "Over 1% of requests are resulting in 5xx errors over the last 5 minutes. Check application logs and check for `chaos.injected` traces."
+
+      # ----------------------------------------------------
+      # Latency / Slow Responses
+      # ----------------------------------------------------
+      - alert: DraftyBirdHighLatency
+        # Alert if p99 latency exceeds 500ms over 5 minutes (ignoring the long-polling endpoints if any existed)
+        expr: >
+          histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 0.5
+        for: 2m
+        labels:
+          severity: warning
+        annotations:
+          summary: "Drafty Bird p99 latency is high"
+          description: "The 99th percentile response time for route {{ $labels.route }} is > 500ms for over 2 minutes."
+
+      # ----------------------------------------------------
+      # Chaos Injected Validation / Informational
+      # ----------------------------------------------------
+      - alert: DraftyBirdChaosActive
+        # Informational alert to notify on-call that chaos engineering is currently firing
+        expr: rate(drafty_bird_chaos_injections_total[2m]) > 0
+        for: 1m
+        labels:
+          severity: info
+        annotations:
+          summary: "Chaos injection is active on Drafty Bird"
+          description: "Chaos events of type {{ $labels.type }} are currently being injected. Check traces for `chaos.injected=true`."
