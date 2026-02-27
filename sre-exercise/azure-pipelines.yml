@@ -1,0 +1,63 @@
+trigger:
+  branches:
+    include:
+      - main
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  - name: azureServiceConnection
+    value: 'DraftyBirdServiceConnection'
+  - name: resourceGroup
+    value: 'rg-drafty-bird-prod'
+  - name: containerAppName
+    value: 'ca-draftybird-prod'
+  - name: acrName
+    value: 'crdraftybirdprod'
+  - name: imageName
+    value: '$(acrName).azurecr.io/drafty-bird:$(Build.BuildId)'
+
+stages:
+- stage: Build
+  jobs:
+  - job: BuildAndPush
+    steps:
+    - task: Docker@2
+      inputs:
+        command: 'buildAndPush'
+        repository: 'drafty-bird'
+        dockerfile: 'docker/Dockerfile'
+        containerRegistry: '$(azureServiceConnection)' # Preconfigured connection to ACR
+        tags: |
+          $(Build.BuildId)
+          latest
+
+- stage: Deploy
+  dependsOn: Build
+  condition: succeeded()
+  jobs:
+  - deployment: DeployToProduction
+    environment: 'production'
+    strategy:
+      runOnce:
+        deploy:
+          steps:
+          # Using Azure CLI to update the Container App image
+          - task: AzureCLI@2
+            inputs:
+              azureSubscription: '$(azureServiceConnection)'
+              scriptType: 'bash'
+              scriptLocation: 'inlineScript'
+              inlineScript: |
+                az containerapp update \
+                  --name $(containerAppName) \
+                  --resource-group $(resourceGroup) \
+                  --image $(imageName)
+
+          # Optional: Wait and verify health using ACA revisions
+          - script: |
+              echo "Waiting for revision to be active..."
+              sleep 10
+              # Verify endpoint here if necessary
+            displayName: "Verify Deployment"

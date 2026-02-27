@@ -1,27 +1,25 @@
-# variables.tf
-variable "aws_region" {
-  description = "The AWS region things are created in"
-  default     = "us-east-1"
+variable "location" {
+  description = "The Azure region to deploy to"
+  default     = "eastus"
 }
 
-variable "ecr_repository_url" {
-  description = "ECR Repository URL for drafty-bird image"
+variable "env" {
+  description = "Environment name e.g. prod"
+  default     = "prod"
+}
+
+variable "container_image" {
+  description = "Container image to deploy"
   type        = string
 }
 
-variable "image_tag" {
-  description = "Docker image tag to deploy"
-  type        = string
-  default     = "latest"
+variable "container_port" {
+  description = "Container port"
+  type        = number
+  default     = 8080
 }
 
 variable "otel_endpoint_url" {
-  description = "URL for the OpenTelemetry collector"
-  type        = string
+  description = "URL for OpenTelemetry OTLP tracing Collector"
   default     = ""
-}
-
-output "alb_hostname" {
-  value       = module.alb.dns_name
-  description = "The DNS name of the load balancer"
 }

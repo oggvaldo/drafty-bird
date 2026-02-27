@@ -1,63 +1,33 @@
-data "aws_vpc" "default" {
-  default = true
+variable "env" { type = string }
+variable "location" { type = string }
+
+resource "azurerm_resource_group" "main" {
+  name     = "rg-drafty-bird-${var.env}"
+  location = var.location
 }
 
-data "aws_subnets" "default" {
-  filter {
-    name   = "vpc-id"
-    values = [data.aws_vpc.default.id]
-  }
+resource "azurerm_virtual_network" "main" {
+  name                = "vnet-drafty-bird-${var.env}"
+  address_space       = ["10.0.0.0/16"]
+  location            = azurerm_resource_group.main.location
+  resource_group_name = azurerm_resource_group.main.name
 }
 
-resource "aws_security_group" "alb" {
-  name        = "drafty-bird-alb-sg"
-  description = "controls access to the ALB"
-  vpc_id      = data.aws_vpc.default.id
+resource "azurerm_subnet" "aca" {
+  name                 = "snet-aca-${var.env}"
+  resource_group_name  = azurerm_resource_group.main.name
+  virtual_network_name = azurerm_virtual_network.main.name
+  address_prefixes     = ["10.0.2.0/23"]
 
-  ingress {
-    protocol    = "tcp"
-    from_port   = 80
-    to_port     = 80
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
-  }
-}
-
-resource "aws_security_group" "ecs_tasks" {
-  name        = "drafty-bird-ecs-tasks-sg"
-  description = "allow inbound access from the ALB only"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    protocol        = "tcp"
-    from_port       = 8080
-    to_port         = 8080
-    security_groups = [aws_security_group.alb.id]
-  }
-
-  egress {
-    protocol    = "-1"
-    from_port   = 0
-    to_port     = 0
-    cidr_blocks = ["0.0.0.0/0"]
+  delegation {
+    name = "aca-delegation"
+    service_delegation {
+      name    = "Microsoft.App/environments"
+      actions = ["Microsoft.Network/virtualNetworks/subnets/join/action"]
+    }
   }
 }
 
-resource "aws_security_group" "efs" {
-  name        = "drafty-bird-efs-sg"
-  description = "Allow inbound NFS traffic from ECS"
-  vpc_id      = data.aws_vpc.default.id
-
-  ingress {
-    protocol        = "tcp"
-    from_port       = 2049
-    to_port         = 2049
-    security_groups = [aws_security_group.ecs_tasks.id]
-  }
-}
+output "rg_name" { value = azurerm_resource_group.main.name }
+output "location" { value = azurerm_resource_group.main.location }
+output "subnet_id" { value = azurerm_subnet.aca.id }

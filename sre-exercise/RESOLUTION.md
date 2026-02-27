@@ -1,82 +1,69 @@
-# Drafty Bird: Architectural Decisions & Trade-offs
+# Drafty Bird: Architectural Decisions & Trade-offs (Azure)
 
-This document (ADR - Architecture Decision Record) explains the reasoning behind the deployment architecture, tooling, and operational choices made for the Drafty Bird service. It is intended to help engineers (especially those onboarding or reviewing the setup) understand *why* we built it this way, and what trade-offs we accepted.
+This ADR explains the reasoning behind the deployment architecture, tooling, and operational choices made for deploying Drafty Bird to Microsoft Azure.
 
 ---
 
-## 1. Compute Choice: AWS ECS with Fargate
+## 1. Compute Choice: Azure Container Apps (ACA)
 
-**Decision:** Run the Drafty Bird Docker container on AWS Elastic Container Service (ECS) using the Fargate launch type.
+**Decision:** Run the Drafty Bird Docker container on Azure Container Apps.
 
 **Reasoning:**
-- **Serverless Operations:** Fargate removes the need to patch, maintain, or auto-scale underlying EC2 instances. This significantly reduces the operational burden on the SRE team.
-- **Cost vs. Reliability:** While Fargate is slightly more expensive per compute-hour than reserved EC2 instances, the cost is offset by the lack of maintenance time. It meets the prompt's requirement where "cost matters, but reliability matters more."
-- **Simplicity:** The application is a single Docker container. ECS is perfectly suited for orchestrating simple, stateless (or single-volume) container workloads compared to the overhead of managing a full Kubernetes (EKS) cluster.
+- **Serverless Operations:** ACA provides Kubernetes-based container orchestration without requiring the team to manage a full Azure Kubernetes Service (AKS) cluster. It abstracts the control plane, patching, and OS maintenance.
+- **Cost vs. Reliability:** ACA scales to zero (if desired) and charges per second of execution. It is highly reliable and integrates natively with Envoy ingress.
+- **Simplicity:** For a single Docker container, the overhead of standard AKS or even bare VMs is unnecessary.
 
 **Trade-offs:**
-- Slower container startup times compared to warm EC2 instances, which marginally impacts auto-scaling responsiveness during sudden traffic spikes.
+- Slower "cold starts" if scaled to zero compared to keeping an Always-On App Service instance running, though we keep `min_replicas = 1` for consistent latency.
 
 ---
 
-## 2. Storage Choice: AWS EFS (Elastic File System) for SQLite
+## 2. Storage Choice: Azure Files for SQLite
 
-**Decision:** Mount an AWS EFS volume to the Fargate container to store the `db.sqlite` file.
+**Decision:** Mount an Azure Files share to the ACA container to store `db.sqlite`.
 
 **Reasoning:**
-- The application relies on SQLite for persistent leaderboard storage. Containers are ephemeral; without an external volume, all high scores would be lost whenever the container restarts or a new deployment occurs.
-- EFS can be easily mounted to ECS Fargate tasks, providing durable, POSIX-compliant file storage that survives task lifecycle events.
+- The application relies on SQLite. Containers are ephemeral; high scores would be lost on restarts.
+- Azure Files leverages the SMB protocol to mount durable, network-attached persistent storage directly into the ACA environment.
 
 **Trade-offs:**
-- **The Concurrency Bottleneck:** SQLite uses file-level locking for writes. EFS is a network file system (NFS). If we scaled the application to run *multiple* Fargate tasks simultaneously, they would all try to grab write locks on the same NFS-mounted `db.sqlite` file, leading to high latency, `SQLITE_BUSY` errors, and potential database corruption.
+- **The Concurrency Bottleneck:** SQLite uses file-level locking. Azure Files introduces network latency. If multiple containers wrote simultaneously via SMB, they would encounter `SQLITE_BUSY` errors and potential DB locking/corruption.
 
 ---
 
-## 3. High Availability vs. Data Integrity (The Single Task Decision)
+## 3. High Availability vs. Data Integrity (The Single Replica Constraint)
 
-**Decision:** Run exactly **one (1)** replica of the ECS task (`desired_count = 1`).
+**Decision:** Run exactly **one (1)** max replica of the Container App (`max_replicas = 1`).
 
 **Reasoning:**
-- Because of the SQLite + EFS concurrency trade-off mentioned above, we must constrain the application to a single writer. 
-- While running a single instance violates traditional High Availability (HA) principles (if the container crashes, there will be brief downtime while ECS spins up a replacement), data integrity for the leaderboard is guaranteed.
+- Because of the SQLite + Azure Files concurrency limitation, we must constrain the application to a single writer. 
+- While running a single instance violates traditional High Availability (HA) principles, data integrity is strictly maintained.
 
 **Trade-offs / Future Work:**
 - We trade immediate fault tolerance for data consistency. 
-- **The Fix:** To achieve true HA (running 2+ containers behind the ALB), we *must* migrate the application off SQLite and onto a concurrent, network-accessible database like PostgreSQL (e.g., AWS RDS).
+- **The Fix:** To achieve HA, we must migrate off SQLite and onto Azure Database for PostgreSQL.
 
 ---
 
-## 4. Observability Tooling (Prometheus & OpenTelemetry)
+## 4. CI/CD & Deployments: Azure DevOps
 
-**Decision:** Standardize on the provided `/metrics` endpoint for Prometheus scraping and utilize OpenTelemetry (`OTEL_EXPORTER_OTLP_ENDPOINT`) for distributed tracing.
+**Decision:** Utilize Azure Pipelines (`azure-pipelines.yml`) to orchestrate container builds and deployments.
 
 **Reasoning:**
-- The application already exposes these standards, avoiding the need for proprietary agents inside the container.
-- **Traces > Logs for Chaos:** Because the app includes chaos engineering functionality (`chaos.injected=true`), tracing is critical. When P99 latency spikes, an engineer can query the OpenTelemetry backend (e.g., Jaeger or AWS X-Ray) to immediately see if the latency was naturally occurring or injected by the chaos engine, saving valuable debugging time.
+- The prompt requested an Azure DevOps or GitHub Actions equivalent to CodeDeploy. Azure DevOps offers deep enterprise integration, robust YAML pipelines, and native tasks (`AzureCLI@2`) for seamlessly pushing to Azure Container Registry (ACR) and triggering ACA updates.
+- **Revisions:** ACA inherently manages "Revisions" on every image update. We can rapidly rollback traffic using native Revision weights if the new code fails.
 
 **Trade-offs:**
-- Requires managing a Prometheus server and an OTLP collector infrastructure, introducing external dependencies to the monitoring stack.
+- Requires maintaining Service Connections and pipeline YAML alongside application code.
 
 ---
 
-## 5. Rollout Strategy: Blue/Green Deployments
+## 5. Infrastructure-as-Code: Terraform Modules
 
-**Decision:** Use AWS CodeDeploy for ECS to perform Blue/Green deployments.
-
-**Reasoning:**
-- The `readyz` endpoint ensures the new (Green) container is fully booted and connected to the EFS volume *before* any production traffic is shifted to it.
-- If the Green deployment fails its health checks, the ALB never routes traffic to it, and CodeDeploy safely aborts, leaving the Blue environment intact.
-
-**Trade-offs:**
----
-
-## 6. Infrastructure-as-Code: Modularization
-
-**Decision:** Define the AWS infrastructure using logical Terraform modules (`networking`, `efs`, `alb`, and `ecs`) rather than a monolithic `main.tf` file.
+**Decision:** Define the Azure infrastructure using modularized Terraform (`networking`, `storage`, `aca`).
 
 **Reasoning:**
-- **Future Scalability:** Breaking the infrastructure into modules makes it much easier to deploy additional services into the same cluster. Instead of copying large blocks of resource definitions, future services can simply invoke the `ecs` module or reuse the existing `alb` and `networking` module outputs.
-- **Separation of Concerns:** Networking (VPCs, Security Groups) changes at a different frequency and often requires different permissions than application compute (ECS Tasks). Modularizing them explicitly defines dependencies and interfaces (via `variables.tf` and `outputs.tf`).
+- **Future Scalability:** By decoupling VNet creation (`networking`) from app hosting (`aca`), future microservices can be deployed into the same network without redefining network architecture. The `storage` module handles the Azure File share independently.
 
 **Trade-offs:**
-- **Initial Overhead:** Creating the directory structure, variables, outputs, and wiring modules together takes longer initially than throwing all resources into a single file.
-- **Complexity in Navigation:** Engineers must trace variable passing between modules (e.g., passing `module.networking.subnet_ids` into `module.ecs.subnet_ids`) rather than reading a flat configuration. However, this trade-off is widely accepted as best practice for maintainable IaC.
+- Initial setup complexity is higher than writing a monolithic `main.tf`, but the long-term maintainability for the SRE team pays off immediately when scaling.
