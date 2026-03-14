@@ -26,6 +26,14 @@
 |    - Vite-built React app (Canvas game)                                      |
 +------------------------------------------------------------------------------+
 
++---------------------- Decoupled Observability Stack -------------------------+
+|                                                                              |
+|  - Prometheus (Scrapes metrics)                                              |
+|  - Grafana (Pre-provisioned dashboards)                                      |
+|  - OpenTelemetry Collector (Receives OTLP traces)                            |
+|  - Jaeger (Visualizes traces)                                                |
++------------------------------------------------------------------------------+
+
 Browser
   -> GET / (loads game)
   -> Optional POST /score
@@ -77,6 +85,7 @@ OpenTelemetry backend instrumentation:
 Exporter behavior:
 - If `OTEL_EXPORTER_OTLP_ENDPOINT` set: OTLP HTTP exporter.
 - Else (non-test/dev): console exporter for local visibility.
+- *Node*: It is recommended to run the Decoupled Observability Stack and configure this endpoint to point to its OpenTelemetry Collector.
 
 ## Chaos Design
 Disabled by default.

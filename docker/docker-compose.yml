@@ -14,20 +14,5 @@ services:
     volumes:
       - drafty_bird_data:/data
 
-  otel-collector:
-    image: otel/opentelemetry-collector-contrib:0.118.0
-    profiles: ['observability']
-    command: ['--config=/etc/otelcol/config.yaml']
-    volumes:
-      - ./otel-collector-config.yaml:/etc/otelcol/config.yaml:ro
-    ports:
-      - '4318:4318'
-
-  jaeger:
-    image: jaegertracing/all-in-one:1.63.0
-    profiles: ['observability']
-    ports:
-      - '16686:16686'
-
 volumes:
   drafty_bird_data:

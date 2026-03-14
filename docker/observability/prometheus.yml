@@ -1,0 +1,10 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  - job_name: "drafty-bird"
+    metrics_path: "/metrics"
+    static_configs:
+      - targets: ["host.docker.internal:8080"]
+        # Note: If running on Linux without Docker Desktop, 
+        # replace host.docker.internal with the host machine's IP address.

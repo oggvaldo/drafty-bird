@@ -1,0 +1,48 @@
+{
+  "title": "Drafty Bird Operations",
+  "timezone": "browser",
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "panels": [
+    {
+      "title": "High Score",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 0, "y": 0 },
+      "targets": [
+        { "expr": "drafty_bird_high_score", "refId": "A" }
+      ]
+    },
+    {
+      "title": "Games Started",
+      "type": "stat",
+      "gridPos": { "h": 6, "w": 6, "x": 6, "y": 0 },
+      "targets": [
+        { "expr": "drafty_bird_games_started_total", "refId": "A" }
+      ]
+    },
+    {
+      "title": "HTTP Request Rate",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "targets": [
+        {
+          "expr": "sum(rate(http_requests_total[1m])) by (method, route, status)",
+          "legendFormat": "{{method}} {{route}} - {{status}}",
+          "refId": "A"
+        }
+      ]
+    },
+    {
+      "title": "Chaos Injections (Rate)",
+      "type": "timeseries",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
+      "targets": [
+        {
+          "expr": "sum(rate(drafty_bird_chaos_injections_total[1m])) by (type)",
+          "legendFormat": "{{type}}",
+          "refId": "A"
+        }
+      ]
+    }
+  ]
+}

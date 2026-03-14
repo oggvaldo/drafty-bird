@@ -18,7 +18,11 @@
     "build:server": "tsc -p apps/server/tsconfig.json",
     "build": "npm run build:web && npm run build:server",
     "typecheck": "tsc -p apps/server/tsconfig.json --noEmit && tsc -p apps/web/tsconfig.json --noEmit",
-    "start": "node dist/server/index.js"
+    "start": "node dist/server/index.js",
+    "docker:app:up": "docker compose -f docker/docker-compose.yml up --build -d",
+    "docker:app:down": "docker compose -f docker/docker-compose.yml down",
+    "docker:obs:up": "docker compose -f docker/observability/docker-compose.yml up -d",
+    "docker:obs:down": "docker compose -f docker/observability/docker-compose.yml down"
   },
   "dependencies": {
     "@opentelemetry/api": "^1.9.0",

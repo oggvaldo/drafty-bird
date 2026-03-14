@@ -56,22 +56,33 @@ npm start
 Open `http://localhost:8080`.
 
 ## Docker
-Build image:
+You can run the application and the observability stack independently using Docker Compose.
+
+**1. Run the Application**
 ```bash
-docker build -f docker/Dockerfile -t drafty-bird:local .
+npm run docker:app:up
+```
+This builds and starts the Drafty Bird backend and frontend. The game will be available at `http://localhost:8080`.
+
+**2. Run the Observability Stack**
+The observability stack (Prometheus, Grafana, OpenTelemetry Collector, and Jaeger) runs independently. This decoupled architecture allows you to easily scale the application or run it in a Kubernetes/Fargate cluster while sending telemetry data to a separate host.
+```bash
+npm run docker:obs:up
 ```
 
-Run container:
-```bash
-docker run --rm -p 8080:8080 -v drafty_bird_data:/data drafty-bird:local
-```
+Access the tools:
+- **Grafana**: `http://localhost:3000` (admin / admin). A "Drafty Bird Operations" dashboard is pre-provisioned!
+- **Jaeger UI**: `http://localhost:16686`
+- **Prometheus**: `http://localhost:9090`
 
-Optional tracing demo with compose (app + collector + Jaeger UI):
+**Sending Telemetry Data from Standalone Containers:**
+By default, the application checks the `OTEL_EXPORTER_OTLP_ENDPOINT` environment variable to know where to send its OpenTelemetry traces. If running the app in a standalone container or on a different host, pass the endpoint like so:
 ```bash
-docker compose -f docker/docker-compose.yml --profile observability up --build
+docker run --rm -p 8080:8080 \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT="http://host.docker.internal:4318" \
+  -v drafty_bird_data:/data \
+  drafty-bird:local
 ```
-
-Jaeger UI: `http://localhost:16686`
 
 ## API Endpoints
 - `GET /healthz`
